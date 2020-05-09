@@ -17,9 +17,33 @@ function wstreset()
 	wst_flag=true
 	wstnow=false
 end
+function wstfullme()
+	local ll
+	Send("hp")
+	no_busy()
+	if CharInfo.info.QX<50 or CharInfo.info.JL<60 then
+		Send("get all from "..var.fullitem)
+		ll=wait.regexp("(你找不到.*这样东西。|那不是容器)", 2)
+		ll= ll or ""
+		if string.find(ll,"那不是容器") and var.wstfull=="yes" then
+			Send("eat "..var.fullitem)
+		end
+		no_busy()
+	else
+		if CharInfo.info.neili<CharInfo.info.maxneili*0.5 then 
+			if var.cantouch=="yes" then
+				Sendcmd("mtc0;yun refresh")
+			end
+		end
+		heal()
+	end
+end
 function wstbegin()
 		local ss0="rideto kaifeng;set wimpy 0;eu;ed;n;w;enter;xia;hp"
-		local wst_enter={"northup","southup","westup", "eastup","up"}
+		local wst_enter={"westup", "eastup","southup","northup","up"}
+--		if not vipinfo() then
+--			wst_enter={"westup", "eastup","southup","northup"}
+--		end
 		EnableGroup("wst")
 		wuchi_get=false
 		wst_flag=true
@@ -31,7 +55,7 @@ function wstbegin()
 			--wait.regexp("你改用另一种内功", 3)
 			Execute("score;hp;hp -m")
 			no_busy()
-			fullme()
+			wstfullme()
 			if not callpet() then
 				print("必须有自己的宠物!@!!!")
 					return false
@@ -51,11 +75,13 @@ function wstbegin()
 					wait.clearall()
 					return test()
 				elseif string.find(ll,"杨小邪嘿嘿一笑") then
+					EnableTimer("watchdog", false) --爬塔关狗
 					no_busy()
 					Wstinfo.startime=os.time()
 					Wstinfo.startexp=CharInfo.info.exp
 					Wstinfo.direction=ss
 					wstnow=true
+					logwin:ColourNote ("yellow","",os.date("%Y-%m-%d-%H-%M-%S",os.time()).." "..CharInfo.info.id.." 开始爬塔:"..ss)
 					return
 				end
 			end
@@ -66,10 +92,8 @@ function wstbegin()
 		end)
 end
 function wstfangqiexp()
-	if Wstinfo.startexp==0 then
-		return false
-	end
-	if CharInfo.info.exp+100000>Wstinfo.startexp then
+	local limit=var.maxexp*0.1+300000
+	if CharInfo.info.exp>var.maxexp+limit then
 		Sendcmd("fangqi exp;hp")
 		no_busy()
 	else
@@ -92,11 +116,12 @@ function wstend(name, line, mch)
 			--me.delay(2)
 			--Execute("rr;jifa force beiming-shengong")
 			--wait.regexp("你改用另一种内功", 3)
-			fullme()
+			wstfullme()
 			todaywst=true
 			wait.clearall()
 			Wstinfo.level=mch[1]
 			Wstinfo.endtime=os.time()
+			logwin:ColourNote ("yellow","",os.date("%Y-%m-%d %H:%M:%S",os.time()).." "..CharInfo.info.id.." 结束爬塔:"..Wstinfo.level)
 			while wstfangqiexp() do
 				Send("hp")
 				wait.time(1)
@@ -132,7 +157,7 @@ function wstdie(name, line, mch)
 			wait.regexp("^[> ]*你找不到", 10)
 			if neili<maxneili/2 then
 				wait.time(2)
-				fullme()
+				wstfullme()
 			end
 			--me.shenguang(2)
 			--me.hanmo(3)
@@ -165,16 +190,14 @@ end
 function wstjudge(name, line, mch)
     EnableTimer("wst_ab", false)
 	EnableGroup("wstpfm", false)
-
 	wst_pass_num=tonumber(mch[1])
 	print("wstpass:"..wst_pass_num)
 	wait.make(function()
 		if wst_pass_num>1 and wst_flag then
 			no_busy()
-			--if wuchi_get then
-			--	get_equ()
-			--	wuchi_get=false
-			--end
+			if wst_pass_num<9 then
+				Send("use fly knife")
+			end
 			Execute("hp;get 1 from 0")
 			wait.regexp("^[> ]*你找不到", 10)
 			if CharInfo.info.neili<CharInfo.info.maxneili/2 then
@@ -182,12 +205,13 @@ function wstjudge(name, line, mch)
 					Sendcmd("mtc0;yun refresh")
 				else
 					wait.time(2)
-					fullme()
+					wstfullme()
 				end
 			end
 			for i= 1 ,#weaponlist do
 				--Send("hide "..weaponlist[i])
 				Send("summon "..weaponlist[i])
+				Send("get "..weaponlist[i])
 				wait.time(1)
 			end
 			Execute("ww;special power;special hatred;u")

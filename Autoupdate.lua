@@ -16,12 +16,14 @@ function updater()--自动更新函数
 		end
 		local config={}
 		config=unserialize(remoteconfig)
-		for k,c in pairs(config) do
+		i=0
+		for k,c in ipairs(config) do
+			print(c.filename)
 			mmd5=GetFileMd5(c.filename)
 			if mmd5~=c.md5 then
 				GetFile(c.filename)
 			else
-				ColourNote ("Red","blue", c.filename.."MD5:"..mmd5)
+				ColourNote ("Red","blue", c.filename.." MD5:"..mmd5)
 				ColourNote ("Red","blue", "MD5符合最新文件，跳过更新")
 			end
 			if c.require=="yes" then

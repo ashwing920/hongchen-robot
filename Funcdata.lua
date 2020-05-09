@@ -12,6 +12,7 @@ num_ch =
 	["九"] = 9,
 }
 
+
 NpcList	= {
 	["双儿"]				= 	{id = "shuang er",			path = "rideto beijing;e;e;e;n;n;e;e;e;e;ne;n;n;break men;n;n;n;n" },
 	["天乙道人"]			= 	{id = "tianyi daoren",		path = "rideto gc;e;e;e;e;e;ne" },
@@ -52,7 +53,7 @@ NpcList	= {
 	["陆乘风"]		= 	{loc = 1858,	id = "lu chengfeng",		 path = "rideto guiyun;enter;n;e"},
 	["孙剥皮"]		= 	{loc = 1042,	id = "sun baopi", 			 path = "rideto suzhou;s;s;w"},
 	["老夫子"]		= 	{loc = 1063,	id = "lao fuzi", 			 path = "rideto suzhou;s;s;s;w"},
-	["张天师"]		= 	{loc = 262,		id = "zhang tianshi", 		 path = "rideto murong;cross;ne;e"},
+	["张天师"]		= 	{loc = 262,		id = "zhang tianshi", 		 path = "rideto suzhou;s;s;s;s;s;s;e"},
 	["封弓影"]		= 	{loc = 2530,	id = "feng gongying", path = "rideto gc;w;w;w"},
 	["大天龙"]		= 	{loc = 3701,	id = "da tianlong", path = "rideto gc;w;w;w;w;w;w;w;w;w;nw"},
 	["黄药师"]		= 	{loc = 1626,	id = "huang yaoshi", path = "rideto taohua;s;s"},
@@ -114,7 +115,8 @@ CharInfo={
 				food=0,faintime=0,cash=0,Martial=0},
 	["Combat"]={FaintCount=0,SuccessRound=0,BugSuccess=0,PoisonCount=0,fbtime=0},
 	disevent="normal",
-	reboot=false
+	reboot=false,
+	repair=false
 }
 Questinfo={
 	startime=0,
@@ -123,6 +125,7 @@ Questinfo={
 	tihui=0,
 	continuous=0,
 	count=0,
+	Questname="",
 	Recordtime=0,
 	failcount=0,
 	bugcount=0,
@@ -130,6 +133,50 @@ Questinfo={
 	["Npc"]={id="",name="",path=""},
 	["killer"]={id="",faint=false,die=false}
 }
+sklist={}
+fullskill={}
+npc={}
+get_npc={
+		path="",
+		loc,
+		pre_loc             --111
+		}
 
-gift={"舍利子","菩提子","人参养荣丸","神聖血清","天香玉露","补天石","聖杯","福寿膏","冰蚕丝","一千两金票","天神之光","寰宇天晶","冰菩提","天乙圣水","昊天果","飞刀灵符","塔灵水晶"}
+
+MyMaze={
+       data={},   --迷宫出口数据
+       line,      --迷宫行数
+       loc,       --当前位置
+       path,      --搜索后可用路径
+       flag={},    --走过后标示
+	   out={},
+	   outloc=0
+       }
+xuemo={
+       step,
+       quest_name,
+       kill_npc,
+	   touxi_npc="骷髅|幽灵|僵尸|骷髅武士|骷髅法师|幽冥之眼|幽冥之火|血僵尸|尸煞",
+       julingfazhen=29,
+       kugukeng=64, --骷髅
+       luanfengang=1, --僵尸
+       huangmiao=57,
+       lingtang=8,  --幽灵
+	   die,--step4怪物是否死亡
+       record={1,8,64,57,29}
+       }
+id={
+	exp1=0,
+	killtime=0,
+	failed=0,
+	expperh=0,
+	minite=0,
+	minite2=0,
+	hour=0,
+	killpermin=0,
+	}
+bag={}
+monster={}
+ghost={",僵尸","尸煞","巫妖","僵尸王","血僵尸","骷髅法师","骷髅武士","骷髅,"}
+gift={"舍利子","菩提子","人参养荣丸","神聖血清","天香玉露","聖杯","福寿膏","冰蚕丝","一千两金票","天神之光","寰宇天晶","冰菩提","天乙圣水","昊天果","塔灵水晶","九转金丹"}
 weaponlist={}

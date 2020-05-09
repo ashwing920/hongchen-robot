@@ -17,10 +17,14 @@ function QuestProtect() --线程内执行 无需再新开wait.make
 	print(ll)
 	if string.find(ll,"你去保护") then
 		print(ww[2])
+		SetTimerOption ("watchdog", "minute", "2")
+		EnableTimer("watchdog", true)
+		ResetTimer("watchdog")
 		Questinfo.Recordtime=os.time()
 		Questinfo.Npc.name=ww[2]
 		Questinfo.Npc.id=NpcList[Questinfo.Npc.name].id
 		Questinfo.Npc.path=NpcList[Questinfo.Npc.name].path
+		Questinfo.killer.id="null"
 		no_busy()
 		dispel()
 		if CharInfo.info.pot>500 and not CharInfo.info.poison and var.fullsk== "yes" then
@@ -50,36 +54,39 @@ function QuestProtect() --线程内执行 无需再新开wait.make
 			end
 			if os.time()-Questinfo.Recordtime>60 then return false end
 		until string.find(ll,"开始跟随")
-		print("fulltime:"..os.time()-Questinfo.Recordtime)
-		if var.cantouch=="yes" then
-			Sendcmd("mtc0;yun refresh")
-		end
-		Execute("follow none;ww;exert regenerate;exert recover;jiqu")
-		ll,ww=wait.regexp("^[> ]*看起来"..CharInfo.info.name.."的(.*)想杀死你！$",60)
-		ll=ll or ""
-		if string.find(ll,"杀死你") then
-			print("killertime:"..os.time()-Questinfo.Recordtime)
-			if ww[1]=="黑衣人" then
-				Questinfo.killer.id=CharInfo.info.id.."'s heiyi ren"
-			elseif ww[1]=="邪派高手" then
-				Questinfo.killer.id=CharInfo.info.id.."'s xiepai gaoshou"
+		miss=0
+		Execute("follow none;ww;exert regenerate;exert recover")
+		if CharInfo.info.tihui<CharInfo.info.thlimit and os.time()-Questinfo.Recordtime<26 then
+			while os.time()-Questinfo.Recordtime<27 do
+				wait.time(1)
 			end
+		end
+		print("fulltime:"..os.time()-Questinfo.Recordtime)
+		if CharInfo.info.tihui>2000 then
+			Send("jiqu")
+		end
+		if Questinfo.killer.id=="null" then
+			ll,ww=wait.regexp("^[> ]*看起来"..CharInfo.info.name.."的(黑衣人|邪派高手)想杀死你！$",60)
+			ll=ll or ""
+			if string.find(ll,CharInfo.info.name.."的") then
+				print("killertime:"..os.time()-Questinfo.Recordtime)
+				if string.find(ww[1],"黑衣人") then
+					Questinfo.killer.id=CharInfo.info.id.."'s heiyi ren"
+				elseif string.find(ww[1],"邪派高手") then
+					Questinfo.killer.id=CharInfo.info.id.."'s xiepai gaoshou"
+				end
+			end
+		end
+		if Questinfo.killer.id~="null" then
 			Questinfo.killer.die=false
 			Questinfo.killer.faint=false
-			CharInfo.disevent="mequest"
-			Disconnect()
-			Connect()
-			i=0
-			while not IsConnected() and i<=60 do
-				wait.time(1)
-				i=i+1
-				Connect()
+			if var.superman=="yes" then
+				CharInfo.disevent="firstkill"
+				disconserver()
 			end
-			print(i)
-			miss=0
 			while true do
-				Execute(CharInfo.info.id..";"..var.passw..";y")
-				wait.regexp("重新连线完毕。",3)
+				CharInfo.disevent="mequest"
+				disconserver()
 				Execute("halt;hp")
 				no_busy()
 				Execute(var.yunpower)
@@ -92,7 +99,7 @@ function QuestProtect() --线程内执行 无需再新开wait.make
 						print("faint or die")
 						break
 					end
-					if CharInfo.info.neili<tonumber(var.min_neili) then 
+					if CharInfo.info.neili<tonumbera(var.min_neili,"min_neili") then 
 						if var.cantouch=="yes" then
 							Sendcmd("mtc0;yun refresh")
 						else
@@ -115,16 +122,7 @@ function QuestProtect() --线程内执行 无需再新开wait.make
 						end
 					end
 					Execute("kill "..Questinfo.killer.id..";"..var.pfm)
-					--wait.time(0.5)
-					CharInfo.disevent="mequest"
-					Disconnect()
-					Connect()
-					i=0
-					while not IsConnected() and i<=60 do
-						wait.time(1)
-						i=i+1
-						Connect()
-					end					
+					--wait.time(0.5)				
 				else
 					if Questinfo.killer.faint or Questinfo.killer.die then
 						break
@@ -135,15 +133,6 @@ function QuestProtect() --线程内执行 无需再新开wait.make
 						no_busy()
 						return
 					end
-					CharInfo.disevent="mequest"
-					Disconnect()
-					Connect()
-					i=0
-					while not IsConnected() and i<=60 do
-						wait.time(1)
-						i=i+1
-						Connect()
-					end	
 				end
 			end
 			Execute("kill "..Questinfo.killer.id)
@@ -173,7 +162,7 @@ function QuestProtect() --线程内执行 无需再新开wait.make
 					crashdump()
 					Questinfo.failcount=Questinfo.failcount+1
 			end
-			ll,ww=wait.regexp("^[> ]*郭靖对你说道:你已经连续完成了(.*)次任务。",30) --你任务还没完成,还不赶紧去做? |汪剑通说道：什么？这么快就完成任务了？
+			ll,ww=wait.regexp("^[> ]*郭靖对你说道:你已经连续完成了(.*)次任务。",5) --你任务还没完成,还不赶紧去做? |汪剑通说道：什么？这么快就完成任务了？
 			ll=ll or ""
 			if string.find(ll,"连续完成") then
 				Questinfo.continuous=chtonum(ww[1])
@@ -184,15 +173,27 @@ function QuestProtect() --线程内执行 无需再新开wait.make
 		wait.time(2)
 	elseif string.find(ll,"任务还没完成") then
 		Send("ask wang jiantong about 保护完成")
-		no_busy()
-		wait.time(3)
-		Send("ask wang 放弃保护")
-		crashdump()
+		ll,ww=wait.regexp({
+							"你向汪剑通打听有关『保护完成』的消息。\n汪剑通说道：什么？这么快就完成任务了",
+							"你向汪剑通打听有关『保护完成』的消息。\n汪剑通说道：你任务还没完成,还不赶紧去做",
+					},5,nil,true,4)
+		ll=ll or ""
+		if string.find(ll,"任务还没完成") then
+				Send("ask wang 放弃保护")
+				crashdump()
+				Questinfo.failcount=Questinfo.failcount+1
+		elseif string.find(ll,"这么快就完成") then
+			ll,ww=wait.regexp("^[> ]*郭靖对你说道:你已经连续完成了(.*)次任务。",5) --你任务还没完成,还不赶紧去做? |汪剑通说道：什么？这么快就完成任务了？
+			ll=ll or ""
+			if string.find(ll,"连续完成") then
+				Questinfo.continuous=chtonum(ww[1])
+			end
+		end
 	elseif string.find(ll,"十两黄金") then
 		Send("eat shao mai")
 		Send("eat shao mai")
 		no_busy()
-		if tonumber(CharInfo.info.Gold)>10 then
+		if tonumbera(CharInfo.info.Gold,"Chargold")>10 then
 			Send("give 10 gold to wang jiantong")
 		else
 			Send("give 1 cash to wang jiantong")
@@ -203,6 +204,6 @@ function QuestProtect() --线程内执行 无需再新开wait.make
 			Questinfo.continuous=0
 			CharInfo.Combat.SuccessRound=CharInfo.Combat.SuccessRound+1
 		end
-		return QuestStart()
+		return test()
 	end
 end

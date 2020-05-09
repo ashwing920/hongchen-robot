@@ -4,23 +4,44 @@ package.path=mclpath.."\\?.lua;"
 package.path=package.path..mclpath.."\\?.luac;"
 require"wait"  
 require "var"
-require "Lingt" --爬塔模块
-require "UI"  --界面模块
-require "Funcdata"  --数据定义模块
-require "Function"  --函数定义模块
-require "QuestProtect"  --保护任务模块
+--require "Skilldata"
+require "addxml"
+dofile (mclpath.."Lingt.luac")
+dofile (mclpath.."UI.luac")
+dofile (mclpath.."Funcdata.luac")
+dofile (mclpath.."QuestProtect.luac")  --保护任务模块
 dofile (mclpath.."Autoupdate.luac")
-print("重新Reload脚本")
+dofile (mclpath.."Questxuemo.luac")
 http = require("socket.http")
-version="1.72"
-mclver="1.72"
+version="2.00"
+mclver="2.00"
 url = "http://139.155.23.7:8080/"
-white=""
-whitelist=""
 remotever=""
+mykey=""
+wait.make(function()
+	while mykey=="" do
+		mykey=http.request(url.."EncryPt.txt")
+		wait.time(1)
+	end
+end)
+wait.make(function()
+	while remotever=="" do
+		remotever=http.request(url.."version.txt")
+		wait.time(1)
+	end
+	print("远端版本加载成功!"..remotever)
+end)
+dofile (mclpath.."Function.luac")
+world.Open(mclpath.."\\output.mcl")
+logwin=GetWorld("chat")
+Activate()
+white=""
+vip=""
+whitelist=""
+viplist=""
 updatelog=""
 begintime=os.time()
-quest_stop=false
+quest_stop=true
 killyf=0 
 killlt=0
 killlly=0
@@ -45,14 +66,10 @@ buyyao=false
 waitcmd=""
 todaywst=true
 wstnow=false
-
-wait.make(function()
-	while remotever=="" do
-		remotever=http.request(url.."version.txt")
-		wait.time(1)
-	end
-	print("远端版本加载成功!"..remotever)
-end)
+sklist=split(var.list_skill,",")
+skdata={}
+final_questfinish=false
+dingdie=false
 wait.make(function()
 	while white=="" do
 		white=http.request(url.."whitelist.txt")
@@ -62,15 +79,46 @@ wait.make(function()
 	print("白名单下载成功!"..#whitelist)
 end)
 wait.make(function()
+	while vip=="" do
+		vip=http.request(url.."vip.txt")
+		wait.time(1)
+	end
+	viplist = split(vip,",")
+	print("VIP名单下载成功!"..#viplist)
+end)
+wait.make(function()
 	while updatelog=="" do
 		updatelog=http.request(url.."updatelog.txt")
 		wait.time(1)
 	end
 	ColourNote ("Red","white",updatelog)
 end)
-
+function testreg(str)
+local s="忘忧无花果"
+	s1,s2=string.find(s,'(.+).[粒颗](.+)')
+	print(s1)
+	print(s2)
+end
+addxml.timer{
+	enabled="n",
+	group="dog",
+	name='watchdog',
+	minute="2",
+	active_closed="y",
+	script='crashdump',
+}
+function reloadsklist()
+	sklist=split(var.list_skill,",")
+	print("技能列表重新载入完毕..."..#sklist)
+end
 function test()
 	EnableGroup("wstpfm", false)
+	EnableGroup("wst", false)
+	EnableGroup("killnpc", false)
+	EnableGroup("maze", false)
+	EnableGroup("give", false)
+	EnableGroup("get", false)
+	EnableTrigger("medie", true)
 	EnableTimer("wst_ab", false)
 	if quest_ok then
 		ColourNote ("Green","white","程序已经开始!!!")
@@ -95,19 +143,23 @@ function test()
 			require("updatemcl")
 			ColourNote ("red","white","mcl更新完毕")
 		end	
-		Execute("score;hp")
+		Execute("score;hp;skills")
 		if not callpet() then
 			print("必须有自己的宠物!@!!!")
 			return false
 		end
-		while whitelist==nil do
-			ColourNote ("red","white","请耐心等待授权检查!!!")
-			wait.time(1)
-		end
-		if whitelist~=nil and not cryptinfo() then
-			ColourNote ("red","white","未经授权！不得使用")
-			return 
-		end	
+--		while whitelist==nil do
+--			ColourNote ("red","white","请耐心等待授权检查!!!")
+--			wait.time(1)
+--		end
+--		if whitelist~=nil and not cryptinfo() then
+--			ColourNote ("red","white","未经授权！不得使用")
+--			return 
+--		end	
+--		if viplist~=nil and vipinfo() then
+--			dofile (mclpath.."Questxuemo.luac")  --血魔任务模块	
+--		end	
+		CharInfo.info.weaponvalue=0
 		get_weapon()
 		Send("ride "..var.petid)
 		for i= 1 ,#weaponlist do
@@ -134,7 +186,6 @@ function test()
 	
 		if Questinfo.startime==0 then
 			Questinfo.startime=os.time()
-			Questinfo.startexp=CharInfo.info.exp
 		end
 		while not quest_stop and not CharInfo.reboot do
 			EnableTriggerGroup("checkbag",true)
@@ -143,8 +194,10 @@ function test()
 			CharInfo.info.Silver=0
 			CharInfo.info.cash=0
 			Execute("hp;i;hp -m")
+			CharInfo.info.weaponvalue=0
+			CharInfo.repair=false
 			for i= 1 ,#weaponlist do
-				Execute("l "..weaponlist[i])
+				Execute("l "..weaponlist[i].." of me")
 			end
 			no_busy()
 			EnableTriggerGroup("checkbag",false)
@@ -161,11 +214,19 @@ function test()
 			ll= ll or ""
 			if not string.find(ll,"那不是容器") then
 				Send("tell "..var.dummy.." Warning!!!缺少full药 请检查!!!")
+				logwin:ColourNote ("yellow","",os.date("%Y-%m-%d %H:%M:%S",os.time()).." "..CharInfo.info.id.." 缺少full药")
+				EnableTimer("watchdog", false)
 				return
 			end
-			while CharInfo.info.QX <90 or CharInfo.info.JL<60 do
+			while tonumbera(CharInfo.info.QX,"CharQX") <90 or tonumbera(CharInfo.info.JL,"CharJL")<60 do
 				fullme()
 				no_busy()
+			end
+			if var.tianshu=="yes" and not CharInfo.info.protect then
+				Send("tell "..var.dummy.." Warning!!!检查到没有天书保护!!!")
+				logwin:ColourNote ("yellow","",os.date("%Y-%m-%d %H:%M:%S",os.time()).." "..CharInfo.info.id.." 没有天书保护")
+				EnableTimer("watchdog", false)
+				return
 			end
 --			if CharInfo.info.pot>=CharInfo.info.potlimit and var.fullsk=="yes" then
 --				Sendcmd(var.safehouse)
@@ -174,7 +235,7 @@ function test()
 --			end
 			print("gold:"..tostring(CharInfo.info.Gold))
 			print("cash:"..tostring(CharInfo.info.cash))
-			if CharInfo.info.Gold>2000 then
+			if tonumbera(CharInfo.info.Gold,"CharGold")>2000 then
 				if not callpet() then
 					print("必须有自己的宠物!@!!!")
 					return false
@@ -182,7 +243,7 @@ function test()
 				Sendcmd("rideto gc;n;w;cun 1500 gold")
 				no_busy()
 			end
-			if CharInfo.info.cash >20 then
+			if tonumbera(CharInfo.info.cash,"CharCash") >20 then
 				if not callpet() then
 					print("必须有自己的宠物!@!!!")
 					return false
@@ -190,21 +251,21 @@ function test()
 				Sendcmd("rideto gc;n;w;cun 15 cash")
 				no_busy()
 			end
-			if CharInfo.info.Gold<100 and CharInfo.info.cash <10 then
+			if tonumbera(CharInfo.info.Gold,"CharGold")<100 and tonumbera(CharInfo.info.cash,"CharCash") <10 then
 				if not callpet() then
 					print("必须有自己的宠物!@!!!")
 					return false
 				end
 				Sendcmd("rideto gc;n;w;qu 299 gold")
 				no_busy()
-				if CharInfo.info.Silver >1000 then 
+				if tonumbera(CharInfo.info.Silver,"CharSilver") >1000 then 
 					Send("cun "..CharInfo.info.Silver.." silver")
 					no_busy()
 				end
 			end
 			if CharInfo.info.hungry then
 				print("eateat")
-				if CharInfo.info.food<10 then
+				if tonumbera(CharInfo.info.food,"Charfood")<10 then
 					if not callpet() then
 						print("必须有自己的宠物!@!!!")
 						return false
@@ -216,16 +277,34 @@ function test()
 				Send("eat yuchi zhou")
 				no_busy()
 			end
-			if CharInfo.info.weaponvalue<30 then
+			if CharInfo.repair or CharInfo.info.weaponvalue==0 then
 				repair()
 				no_busy()
 			end
-			if tonumber(var.mingsi_lvl)>0 and tonumber(CharInfo.info.Martial)>tonumber(var.mingsi_lvl) then
+			if tonumbera(var.mingsi_lvl,"mingsi_lvl")>0 and tonumbera(CharInfo.info.Martial,"CharMartial")>tonumbera(var.mingsi_lvl,"mingsi_lvl") then
 				mingsi()
 			end
-			QuestProtect()
-			if not todaywst and not quest_stop and Questinfo.count  % 5 ==0 then
-				return wstbegin()
+			if var.questtype=="protect" then
+				QuestProtect()
+			end
+			if var.questtype=="xuemo" then
+				if var.cantouch~="yes" then
+					ColourNote ("red","white","作为终极任务，没有10兵说的过去？")
+					return false
+				end
+--				if not vipinfo() then
+--					ColourNote ("red","white","请先申请成为VVVVVVVIP！！！")
+--					return false
+--				end				
+				QuestXuemo()
+			end
+			if not todaywst and not quest_stop  then
+				if var.questtype=="protect" and Questinfo.count  % 5 ==0 then
+					return wstbegin()
+				end
+				if var.questtype=="xuemo" then
+					return wstbegin()
+				end
 			end
 		end
 		--walkto("rideto beijing;w;w;w;n;n;e;e;e;n;n")

@@ -39,10 +39,30 @@ function countwin()
 	WindowText(win_Count, "f3","本轮平均任务次数： 【"..tostring(GetAverageCount()).."次/时】",5, 115, 0, 0,ColourNameToRGB("cyan"),false)
 	WindowText(win_Count, "f3","本轮开始时间： 【"..tostring(os.date("%Y-%m-%d %H:%M:%S",Questinfo.startime)).."】",70, 145, 0, 0,ColourNameToRGB("White"),false)
     WindowShow(win_Count,true)
-	combatwin()
+	if var.questtype=="xuemo" then
+		xuemowin()
+	else
+		combatwin()
+	end
 	wstwin()
 end
-
+function xuemowin()
+    local WINDOW_WIDTH=GetInfo(264)
+    WINDOW_WIDTH=WINDOW_WIDTH
+    if WINDOW_WIDTH >=380 then WINDOW_WIDTH=380 end
+    local WINDOW_HEIGHT = 110
+    local WINDOW_POSITION = 7
+    local WINDOW_BACKGROUND_COLOUR = ColourNameToRGB ("black")
+    win_hp = "CombatCount"
+    WindowCreate (win_hp, 0, 155,WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_POSITION, 0, WINDOW_BACKGROUND_COLOUR)
+    local BOX_COLOUR = ColourNameToRGB ("darkgreen")
+    WindowCircleOp (win_hp, 2, 0, 15, 0, 0, BOX_COLOUR, 6, 2, 0x000000, 1)
+	WindowFont(win_hp, "f3", "宋体", 9)
+	WindowText(win_hp, "f3","血魔综合统计",150, 2, 0, 0,ColourNameToRGB("Red"),false)
+	WindowText(win_hp, "f3","  当前任务阶段： 【"..tostring(Questinfo.Questname).."】",5, 25, 0, 0,ColourNameToRGB("White"),false)
+	WindowText(win_hp, "f3","  当前目标 ： 【"..tostring(xuemo.kill_npc).."】",5, 55, 0, 0,ColourNameToRGB("cyan"),false)
+    WindowShow(win_hp,true)
+end
 function combatwin()
     local WINDOW_WIDTH=GetInfo(264)
     WINDOW_WIDTH=WINDOW_WIDTH
